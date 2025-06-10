@@ -1,7 +1,4 @@
 from django.db import models
-
-# Create your models here.
-from django.db import models
 from django.contrib.auth.models import User
 
 class Team(models.Model):
@@ -15,7 +12,6 @@ class Profile(models.Model):
         ('engineer', 'Engineer'),
         ('team_leader', 'Team Leader'),
     ]
-
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     team = models.ForeignKey(Team, on_delete=models.SET_NULL, null=True)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
@@ -45,7 +41,6 @@ class Vote(models.Model):
         ('yellow', 'Yellow'),
         ('green', 'Green'),
     ]
-
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     session = models.ForeignKey(Session, on_delete=models.CASCADE)
     card = models.ForeignKey(HealthCard, on_delete=models.CASCADE)
