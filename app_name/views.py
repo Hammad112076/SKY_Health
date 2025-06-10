@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from .models import Profile, HealthCard, Session, Vote
 from .forms import RegisterForm, SessionForm, VoteForm
@@ -11,6 +12,7 @@ def register_view(request):
         if form.is_valid():
             user = form.save()
             Profile.objects.create(user=user, role=form.cleaned_data['role'])
+            messages.success(request, "Account created successfully. Please log in.")
             return redirect('login')
     else:
         form = RegisterForm()
@@ -19,18 +21,25 @@ def register_view(request):
 
 def login_view(request):
     if request.method == 'POST':
-        username = request.POST['username']
-        password = request.POST['password']
-        role = request.POST['role']
-        user = authenticate(username=username, password=password)
-        if user and user.profile.role == role:
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        role = request.POST.get('role')
+
+        user = authenticate(request, username=username, password=password)
+
+        if user and hasattr(user, 'profile') and user.profile.role == role:
             login(request, user)
+            messages.success(request, f"Logged in as {role.capitalize()}")
             return redirect('dashboard')
+        else:
+            messages.error(request, "Invalid username, password, or role.")
+    
     return render(request, 'health/login.html')
 
 
 def logout_view(request):
     logout(request)
+    messages.success(request, "You have been logged out.")
     return redirect('login')
 
 
@@ -53,6 +62,7 @@ def manage_sessions(request):
             session = form.save(commit=False)
             session.created_by = request.user
             session.save()
+            messages.success(request, "Session created.")
             return redirect('manage_sessions')
     else:
         form = SessionForm()
@@ -63,8 +73,7 @@ def manage_sessions(request):
 
 @login_required
 def vote_view(request):
-    profile = request.user.profile
-    if profile.role != 'engineer':
+    if request.user.profile.role != 'engineer':
         return redirect('dashboard')
 
     session = Session.objects.filter(is_active=True).last()
@@ -83,6 +92,7 @@ def vote_view(request):
                     card=card,
                     defaults={'color': color}
                 )
+            messages.success(request, "Vote submitted.")
             return redirect('summary')
     else:
         form = VoteForm(cards)
@@ -94,17 +104,3 @@ def vote_view(request):
 def summary_view(request):
     votes = Vote.objects.filter(user=request.user)
     return render(request, 'health/summary.html', {'votes': votes})
-
-# === urls.py (inside health/urls.py) ===
-from django.urls import path
-from . import views
-
-urlpatterns = [
-    path('register/', views.register_view, name='register'),
-    path('login/', views.login_view, name='login'),
-    path('logout/', views.logout_view, name='logout'),
-    path('dashboard/', views.dashboard_view, name='dashboard'),
-    path('vote/', views.vote_view, name='vote'),
-    path('summary/', views.summary_view, name='summary'),
-    path('manage_sessions/', views.manage_sessions, name='manage_sessions'),
-]

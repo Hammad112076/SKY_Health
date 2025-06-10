@@ -1,0 +1,13 @@
+{% extends "main.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content1 %}
+<h2>Welcome, {{ profile.user.username }}</h2>
+<p>Your role: {{ profile.role }}</p>
+
+{% if profile.role == 'team_leader' %}
+    <a href="{% url 'manage_sessions' %}">Manage Sessions</a>
+{% else %}
+    <a href="{% url 'vote' %}">Vote Now</a>
+{% endif %}
+{% endblock %}
