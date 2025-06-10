@@ -29,11 +29,16 @@ class HealthCard(models.Model):
 class Session(models.Model):
     name = models.CharField(max_length=100)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
-    start_time = models.DateTimeField(auto_now_add=True)
+    start_time = models.DateTimeField()
+    end_time = models.DateTimeField()
     is_active = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name
+
+    def is_current(self):
+        from django.utils.timezone import now
+        return self.is_active and self.start_time <= now() <= self.end_time
 
 class Vote(models.Model):
     COLOR_CHOICES = [
