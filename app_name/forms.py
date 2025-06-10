@@ -1,4 +1,5 @@
 from django import forms
+from django.forms.widgets import DateTimeInput
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from .models import Profile, Session, Vote
@@ -14,8 +15,12 @@ class RegisterForm(UserCreationForm):
 class SessionForm(forms.ModelForm):
     class Meta:
         model = Session
-        fields = ['name', 'is_active']
-
+        fields = ['name', 'start_time', 'end_time', 'is_active']
+        widgets = {
+            'start_time': DateTimeInput(attrs={'type': 'datetime-local'}),
+            'end_time': DateTimeInput(attrs={'type': 'datetime-local'}),
+        }
+        
 class VoteForm(forms.Form):
     def __init__(self, cards, *args, **kwargs):
         super().__init__(*args, **kwargs)
