@@ -5,17 +5,37 @@ from django.contrib.auth.decorators import login_required
 from .models import Profile, HealthCard, Session, Vote
 from .forms import RegisterForm, SessionForm, VoteForm
 
+from .forms import SessionForm
+
+@login_required
+def create_session_view(request):
+    if request.method == 'POST':
+        form = SessionForm(request.POST)
+        if form.is_valid():
+            session = form.save(commit=False)
+            session.created_by = request.user
+            session.save()
+            return redirect('dashboard')  # Redirect after creating session
+    else:
+        form = SessionForm()
+
+    return render(request, 'health/create_session.html', {'form': form})
 
 def register_view(request):
     if request.method == 'POST':
         form = RegisterForm(request.POST)
         if form.is_valid():
             user = form.save()
-            Profile.objects.create(user=user, role=form.cleaned_data['role'])
-            messages.success(request, "Account created successfully. Please log in.")
+            role = form.cleaned_data.get('role')
+            team = form.cleaned_data.get('team')
+
+            # Create profile
+            Profile.objects.create(user=user, role=role, team=team)
+
             return redirect('login')
     else:
         form = RegisterForm()
+    
     return render(request, 'health/register.html', {'form': form})
 
 
@@ -23,17 +43,19 @@ def login_view(request):
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
-        role = request.POST.get('role')
+        role = request.POST.get('role')  # optional if role is removed from login form
 
         user = authenticate(request, username=username, password=password)
-
-        if user and hasattr(user, 'profile') and user.profile.role == role:
+        if user is not None:
             login(request, user)
-            messages.success(request, f"Logged in as {role.capitalize()}")
-            return redirect('dashboard')
+            user_role = user.profile.role
+            if user_role == 'team_leader':
+                return redirect('team_leader_dashboard')  
+            elif user_role == 'engineer':
+                return redirect('vote')  
         else:
-            messages.error(request, "Invalid username, password, or role.")
-    
+            messages.error(request, 'Invalid username or password.')
+
     return render(request, 'health/login.html')
 
 

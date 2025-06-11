@@ -1,0 +1,12 @@
+{% extends 'health/main.html' %}
+{% block content1 %}
+<h2>Team Leader Dashboard</h2>
+<a href="{% url 'create_session' %}">+ Create New Session</a>
+<ul>
+    {% for session in sessions %}
+        <li>{{ session.name }} | Active: {{ session.is_active }}</li>
+    {% empty %}
+        <li>No sessions created yet.</li>
+    {% endfor %}
+</ul>
+{% endblock %}

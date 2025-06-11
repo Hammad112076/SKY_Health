@@ -1,13 +1,12 @@
-{% extends "main.html" %}
-{% block title %}Dashboard{% endblock %}
-
+{% extends 'health/main.html' %}
 {% block content1 %}
-<h2>Welcome, {{ profile.user.username }}</h2>
-<p>Your role: {{ profile.role }}</p>
-
-{% if profile.role == 'team_leader' %}
-    <a href="{% url 'manage_sessions' %}">Manage Sessions</a>
-{% else %}
-    <a href="{% url 'vote' %}">Vote Now</a>
-{% endif %}
+<h2>Engineer Dashboard</h2>
+<p>Active Sessions to Vote In:</p>
+<ul>
+    {% for session in sessions %}
+        <li>{{ session.name }} | Ends: {{ session.end_time }}</li>
+    {% empty %}
+        <li>No active sessions available.</li>
+    {% endfor %}
+</ul>
 {% endblock %}

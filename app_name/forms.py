@@ -3,14 +3,20 @@ from django.forms.widgets import DateTimeInput
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from .models import Profile, Session, Vote
+from .models import Team
 
 class RegisterForm(UserCreationForm):
     email = forms.EmailField()
     role = forms.ChoiceField(choices=Profile.ROLE_CHOICES)
-
-    class Meta:
+    team = forms.ModelChoiceField(
+        queryset=Team.objects.all(),  # Show all available teams
+        required=True,
+        label="Team"
+    )
+class Meta:
         model = User
-        fields = ['username', 'email', 'password1', 'password2']
+        fields = ['username', 'email', 'password1', 'password2', 'role', 'team']
+
 
 class SessionForm(forms.ModelForm):
     class Meta:
@@ -31,3 +37,5 @@ class VoteForm(forms.Form):
                 widget=forms.RadioSelect,
                 required=True
             )
+
+            

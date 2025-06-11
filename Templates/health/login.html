@@ -1,23 +1,48 @@
+{% extends 'health/main.html' %}
 {% load static %}
-<link rel="stylesheet" href="{% static 'health/style.css' %}">
-<h2>Login</h2>
-<form method="post">
-  {% csrf_token %}
-  <input type="text" name="username" placeholder="Username" required>
-  <input type="password" name="password" placeholder="Password" required>
-  <select name="role" required>
-    <option value="engineer">Engineer</option>
-    <option value="team_leader">Team Leader</option>
-  </select>
-  <button type="submit">Login</button>
-</form>
-<p>Don’t have an account?
-    <a href="{% url 'register' %}">Register here</a>
-</p>
-{% if messages %}
-  <ul class="messages">
-    {% for message in messages %}
-      <li>{{ message }}</li>
-    {% endfor %}
-  </ul>
-{% endif %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="text-center mb-4">
+            <h3 class="mt-3">Login</h3>
+        </div>
+
+        <form method="post" class="mb-4">
+            {% csrf_token %}
+
+            {% if messages %}
+                <div class="alert alert-danger">
+                    <ul class="mb-0">
+                        {% for message in messages %}
+                            <li>{{ message }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+
+            <div class="mb-3">
+                <label for="id_username" class="form-label">Username</label>
+                <input type="text" name="username" id="id_username" class="form-control" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="id_password" class="form-label">Password</label>
+                <input type="password" name="password" id="id_password" class="form-control" required>
+            </div>
+
+            <div class="d-grid gap-2 mb-3">
+                <button type="submit" class="btn btn-dark">Login</button>
+            </div>
+
+            <div class="text-center">
+                <p class="mb-0">Don’t have an account?
+                    <a href="{% url 'register' %}" class="btn btn-sm btn-outline-secondary">Register here</a>
+                </p>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

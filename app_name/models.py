@@ -7,17 +7,27 @@ class Team(models.Model):
     def __str__(self):
         return self.name
 
-class Profile(models.Model):
-    ROLE_CHOICES = [
-        ('engineer', 'Engineer'),
-        ('team_leader', 'Team Leader'),
-    ]
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
-    team = models.ForeignKey(Team, on_delete=models.SET_NULL, null=True)
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+class Team(models.Model):
+    name = models.CharField(max_length=100, unique=True)
 
     def __str__(self):
-        return f"{self.user.username} - {self.role}"
+        return self.name
+
+
+class Profile(models.Model):
+    ROLE_CHOICES = [
+        ('team_leader', 'Team Leader'),
+        ('engineer', 'Engineer'),
+    ]
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+    team = models.ForeignKey(Team, on_delete=models.SET_NULL, null=True)
+
+    def __str__(self):
+        return f"{self.user.username} ({self.role})"
+
+
 
 class HealthCard(models.Model):
     title = models.CharField(max_length=100)

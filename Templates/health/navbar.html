@@ -1,5 +1,13 @@
-<div>
-    <h1>
-        Logo
-    </h1>
-</div>
+{% if user.is_authenticated %}
+<nav>
+    <ul>
+        <li><a href="{% url 'dashboard' %}">Dashboard</a></li>
+        {% if user.profile.role == 'team_leader' %}
+            <li><a href="{% url 'create_session' %}">Create Session</a></li>
+        {% elif user.profile.role == 'engineer' %}
+            <li><a href="{% url 'summary' %}">Team Summary</a></li>
+        {% endif %}
+        <li><a href="{% url 'logout' %}">Logout</a></li>
+    </ul>
+</nav>
+{% endif %}
