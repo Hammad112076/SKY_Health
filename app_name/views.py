@@ -4,8 +4,9 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from .models import Profile, HealthCard, Session, Vote
 from .forms import RegisterForm, SessionForm, VoteForm
-
 from .forms import SessionForm
+
+from collections import defaultdict
 
 @login_required
 def create_session_view(request):
@@ -123,6 +124,134 @@ def vote_view(request):
 
 
 @login_required
-def summary_view(request):
-    votes = Vote.objects.filter(user=request.user)
-    return render(request, 'health/summary.html', {'votes': votes})
+def team_summary_view(request):
+    user = request.user
+
+    if user.profile.role != 'team_leader':
+        return redirect('dashboard')  # Only team leaders allowed
+
+    team = user.profile.team  # The team the leader manages
+
+    sessions = Session.objects.filter(created_by=user).order_by('-start_time')
+    selected_session = None
+    session_id = request.GET.get('session')
+
+    if session_id:
+        try:
+            selected_session = sessions.get(id=session_id)
+        except Session.DoesNotExist:
+            selected_session = None
+
+    # Placeholder structure — you can replace this with actual vote calculation
+    from collections import defaultdict
+    team_stats = defaultdict(lambda: {
+        'name': '',
+        'vote_counts': {'green': 0, 'amber': 0, 'red': 0, 'pending': 0},
+        'comments': [],
+        'icon': 'fas fa-chart-pie'
+    })
+
+    if selected_session:
+        cards = HealthCard.objects.all()
+        for card in cards:
+            votes = Vote.objects.filter(session=selected_session, card=card)
+            vote_counts = {'green': 0, 'amber': 0, 'red': 0, 'pending': 0}
+            comments = []
+
+            for vote in votes:
+                vote_counts[vote.color] += 1
+                if vote.comment:
+                    comments.append({'vote': vote.color, 'comment': vote.comment})
+
+            team_stats[card.id] = {
+                'name': card.title,
+                'vote_counts': vote_counts,
+                'comments': comments,
+                'icon': card.icon_class if hasattr(card, 'icon_class') else 'fas fa-circle'
+            }
+
+    context = {
+        'selected_team': team,
+        'sessions': sessions,
+        'selected_session': selected_session,
+        'team_stats': dict(team_stats)
+    }
+
+    return render(request, 'health/team_summary.html', context)
+
+
+@login_required
+def dashboard_view(request):
+    profile = request.user.profile
+
+    if profile.role == 'team_leader':
+        return redirect('team_leader_dashboard')
+    elif profile.role == 'engineer':
+        return redirect('engineer_dashboard')
+    else:
+        messages.error(request, 'Unknown role.')
+        return redirect('logout')
+
+@login_required
+def team_leader_dashboard_view(request):
+    user = request.user
+    profile = user.profile
+
+    if profile.role != 'team_leader':
+        return redirect('dashboard')
+
+    team = profile.team
+    sessions = Session.objects.filter(created_by=user).order_by('-start_time')
+    selected_session = sessions.first()
+
+    team_stats = defaultdict(lambda: {
+        'name': '',
+        'vote_counts': {'green': 0, 'amber': 0, 'red': 0, 'pending': 0},
+        'comments': [],
+        'icon': 'fas fa-chart-pie'
+    })
+
+    if selected_session:
+        cards = HealthCard.objects.all()
+        for card in cards:
+            votes = Vote.objects.filter(session=selected_session, card=card)
+            vote_counts = {'green': 0, 'amber': 0, 'red': 0, 'pending': 0}
+            comments = []
+
+            for vote in votes:
+                vote_counts[vote.color] += 1
+                if vote.comment:
+                    comments.append({'vote': vote.color, 'comment': vote.comment})
+
+            team_stats[card.id] = {
+                'name': card.title,
+                'vote_counts': vote_counts,
+                'comments': comments,
+                'icon': getattr(card, 'icon_class', 'fas fa-circle')
+            }
+
+    # Totals for the chart/sidebar
+    total_red = sum(stat['vote_counts'].get('red', 0) for stat in team_stats.values())
+    total_amber = sum(stat['vote_counts'].get('amber', 0) for stat in team_stats.values())
+    total_green = sum(stat['vote_counts'].get('green', 0) for stat in team_stats.values())
+    total_votes = total_red + total_amber + total_green
+
+    context = {
+        'selected_team': team,
+        'selected_session': selected_session,
+        'sessions': sessions,
+        'team_stats': dict(team_stats),
+        'total_red': total_red,
+        'total_amber': total_amber,
+        'total_green': total_green,
+        'total_votes': total_votes,
+    }
+
+    return render(request, 'health/team_leader_dashboard.html', context)
+
+
+
+@login_required
+def engineer_dashboard_view(request):
+    # Your logic for the engineer dashboard (you may already have one like vote_view)
+    return render(request, 'health/engineer_dashboard.html')  # or 'health/vote.html'

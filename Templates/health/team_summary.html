@@ -1,0 +1,112 @@
+{% extends 'health/main.html' %}
+{% load voting_extras %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    .progress-bar {
+        height: 25px;
+    }
+    .progress-bar-red { background-color: #dc3545; }
+    .progress-bar-amber { background-color: #ffc107; }
+    .progress-bar-green { background-color: #28a745; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Team Summary</h1>
+    
+    {% if user.profile.is_team_leader and selected_team %}
+        <div class="d-flex align-items-center gap-2">
+            <a href="{% url 'voting_dashboard' %}?voting=true&team={{ selected_team.id }}" class="btn btn-primary">Vote</a>
+        </div>
+    {% endif %}
+</div>
+
+{% if not selected_team %}
+    <div class="alert alert-info">
+        You are not assigned to any team. Please contact your admin.
+    </div>
+{% elif not sessions %}
+    <div class="alert alert-warning">
+        No sessions have been created for your team yet. <a href="{% url 'create_session' %}">Start one now</a>.
+    </div>
+{% else %}
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <strong>Current Session:</strong> {{ selected_session.name }}
+            <span class="ms-3 badge {% if selected_session.active %}bg-success{% else %}bg-secondary{% endif %}">
+                {% if selected_session.active %}Active{% else %}Closed{% endif %}
+            </span>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        {% for category_id, stats in team_stats.items %}
+        <div class="col-md-6">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header d-flex align-items-center">
+                    <span class="badge rounded-circle p-2 me-2 bg-{{ stats.color }}">
+                        <i class="fas fa-{{ stats.icon }} text-white"></i>
+                    </span>
+                    <h5 class="mb-0">{{ stats.name }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Red: {{ stats.vote_counts.red }}</span>
+                        <span>Amber: {{ stats.vote_counts.amber }}</span>
+                        <span>Green: {{ stats.vote_counts.green }}</span>
+                    </div>
+
+                    <div class="progress mb-4">
+                        {% with counts=stats.vote_counts %}
+                            <div class="progress-bar progress-bar-red" style="width: {{ counts|vote_percentage:'red' }}%;">{{ counts.red }}</div>
+                            <div class="progress-bar progress-bar-amber" style="width: {{ counts|vote_percentage:'amber' }}%;">{{ counts.amber }}</div>
+                            <div class="progress-bar progress-bar-green" style="width: {{ counts|vote_percentage:'green' }}%;">{{ counts.green }}</div>
+                        {% endwith %}
+                    </div>
+
+                    <h6>Status:</h6>
+                    {% with counts=stats.vote_counts %}
+                        {% if counts.red > counts.amber and counts.red > counts.green %}
+                            <div class="alert alert-danger"><strong>Critical</strong> - Needs immediate attention.</div>
+                        {% elif counts.amber > counts.red and counts.amber > counts.green %}
+                            <div class="alert alert-warning"><strong>Amber</strong> - Some issues present.</div>
+                        {% elif counts.green > counts.red and counts.green > counts.amber %}
+                            <div class="alert alert-success"><strong>Healthy</strong> - Things are going well.</div>
+                        {% elif counts.red == 0 and counts.amber == 0 and counts.green == 0 %}
+                            <div class="alert alert-info">No votes yet for this category.</div>
+                        {% else %}
+                            <div class="alert alert-secondary">Mixed responses - further investigation needed.</div>
+                        {% endif %}
+
+                        {% if counts.pending > 0 %}
+                            <div class="alert alert-info mt-2 small">
+                                <i class="fas fa-info-circle me-2"></i> {{ counts.pending }} votes still pending.
+                            </div>
+                        {% endif %}
+                    {% endwith %}
+
+                    {% if stats.comments %}
+                    <hr>
+                    <h6>Anonymous Feedback:</h6>
+                    <div style="max-height: 150px; overflow-y: auto;">
+                        {% for comment in stats.comments %}
+                        <div class="mb-2 pb-2 border-bottom small">
+                            <strong>{{ comment.vote|title }}:</strong> {{ comment.comment }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="mt-4">
+        <canvas id="summaryChart" width="400" height="200"></canvas>
+    </div>
+{% endif %}
+{% endblock %}
