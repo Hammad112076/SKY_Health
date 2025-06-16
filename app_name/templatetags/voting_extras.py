@@ -3,6 +3,10 @@ from django import template
 register = template.Library()
 
 @register.filter
+def get_card_field(form, card):
+    return form[f'card_{card.id}']
+
+@register.filter
 def subtract(value, arg):
     """Subtracts arg from value."""
     try:

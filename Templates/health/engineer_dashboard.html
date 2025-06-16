@@ -32,15 +32,17 @@
                     </div>
                     <div class="card-body">
                         {% with voted_count=user_votes|length total_cards=cards|length %}
-                            <div class="progress mb-3" style="height: 24px;">
-                                <div class="progress-bar bg-success"
-                                     role="progressbar"
-                                     aria-valuenow="{{ voted_count }}"
-                                     aria-valuemin="0"
-                                     aria-valuemax="{{ total_cards }}">
-                                    {{ voted_count }} / {{ total_cards }} Completed
+                            {% with progress=voted_count|percentage:total_cards %}
+                                <div class="progress mb-3" style="height: 24px;">
+                                    <div class="progress-bar bg-success"
+                                         role="progressbar"
+                                         aria-valuenow="{{ voted_count }}"
+                                         aria-valuemin="0"
+                                         aria-valuemax="{{ total_cards }}">
+                                        {{ voted_count }} / {{ total_cards }} Completed
+                                    </div>
                                 </div>
-                            </div>
+                            {% endwith %}
                             {% if voted_count == total_cards %}
                                 <div class="alert alert-success">All votes submitted.</div>
                             {% else %}
@@ -50,35 +52,26 @@
                     </div>
                 </div>
 
-                <!-- Cards to Vote -->
-                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-                    {% for card in cards %}
-                        {% with vote_status=user_votes|get_vote_status:card.id %}
+                <!-- Voting Form -->
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 mb-4">
+                        {% for card in cards %}
                         <div class="col">
-                            <div class="card h-100 {% if not vote_status %}border-warning{% endif %}">
+                            <div class="card h-100 shadow-sm">
                                 <div class="card-header bg-light">
                                     <h5 class="mb-0">{{ card.title }}</h5>
                                 </div>
                                 <div class="card-body">
                                     <p>{{ card.description }}</p>
-                                    <p>Status:
-                                        <strong class="{% if vote_status == 'green' %}text-success
-                                                        {% elif vote_status == 'yellow' %}text-warning
-                                                        {% elif vote_status == 'red' %}text-danger
-                                                        {% else %}text-muted{% endif %}">
-                                            {% if vote_status %}
-                                                {{ vote_status|capfirst }}
-                                            {% else %}
-                                                Not Voted
-                                            {% endif %}
-                                        </strong>
-                                    </p>
+                                    {{ vote_form|get_card_field:card }}
                                 </div>
                             </div>
                         </div>
-                        {% endwith %}
-                    {% endfor %}
-                </div>
+                        {% endfor %}
+                    </div>
+                    <button type="submit" class="btn btn-success">Submit All Votes</button>
+                </form>
             {% endif %}
         </div>
     </div>

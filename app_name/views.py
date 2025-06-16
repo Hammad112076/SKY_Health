@@ -227,21 +227,39 @@ def team_leader_dashboard_view(request):
 def engineer_dashboard(request):
     profile = request.user.profile
     team = profile.team
-    selected_session = None
+    selected_session = Session.objects.filter(is_active=True).last()
     cards = HealthCard.objects.all()
     user_votes = []
-    user_vote_comments = {}
+    existing_votes = {}
 
-    if team:
-        selected_session = Session.objects.filter(is_active=True).last()
-        if selected_session and selected_session.is_current():
-            user_votes = Vote.objects.filter(user=request.user, session=selected_session)
-            user_vote_comments = {vote.card.id: vote.comment for vote in user_votes}
+    if selected_session and selected_session.is_current():
+        user_votes = Vote.objects.filter(user=request.user, session=selected_session)
+        existing_votes = {vote.card.id: vote.color for vote in user_votes}
+
+    if request.method == 'POST':
+        form = VoteForm(cards, request.POST)
+        if form.is_valid():
+            for card in cards:
+                field_name = f'card_{card.id}'
+                color = form.cleaned_data.get(field_name)
+
+                # Save or update the vote
+                Vote.objects.update_or_create(
+                    user=request.user,
+                    session=selected_session,
+                    card=card,
+                    defaults={'color': color}
+                )
+            messages.success(request, 'All votes submitted successfully.')
+            return redirect('engineer_dashboard')
+    else:
+        form = VoteForm(cards)
 
     context = {
         'selected_session': selected_session,
         'cards': cards,
         'user_votes': user_votes,
-        'user_votes_comments': user_vote_comments,
+        'existing_votes': existing_votes,
+        'vote_form': form
     }
     return render(request, 'health/engineer_dashboard.html', context)
