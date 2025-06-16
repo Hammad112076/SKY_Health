@@ -8,7 +8,10 @@
     <div class="row mb-4">
         <div class="col">
             <h1>Team Health Voting</h1>
-            <span class="badge bg-primary fs-5">Engineer Dashboard</span>
+            <span class="badge bg-primary fs-5">
+            {% if user.profile.role == 'team_leader' %}Team Leader{% else %}Engineer{% endif %} Dashboard
+            </span>
+
 
             <!-- Session Info -->
             <div class="card shadow-sm my-4">
@@ -25,53 +28,59 @@
             </div>
 
             {% if selected_session %}
-                <!-- Progress -->
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0">Your Voting Progress</h5>
-                    </div>
-                    <div class="card-body">
-                        {% with voted_count=user_votes|length total_cards=cards|length %}
-                            {% with progress=voted_count|percentage:total_cards %}
-                                <div class="progress mb-3" style="height: 24px;">
-                                    <div class="progress-bar bg-success"
-                                         role="progressbar"
-                                         aria-valuenow="{{ voted_count }}"
-                                         aria-valuemin="0"
-                                         aria-valuemax="{{ total_cards }}">
-                                        {{ voted_count }} / {{ total_cards }} Completed
-                                    </div>
-                                </div>
-                            {% endwith %}
-                            {% if voted_count == total_cards %}
-                                <div class="alert alert-success">All votes submitted.</div>
-                            {% else %}
-                                <div class="alert alert-warning">{{ total_cards|subtract:voted_count }} votes remaining.</div>
-                            {% endif %}
-                        {% endwith %}
-                    </div>
-                </div>
+            <!-- Voting Form -->
+            <form method="post">
+                {% csrf_token %}
+                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 mb-4">
+                    {% for card in cards %}
+                    <div class="col">
+                        <div class="card h-100 shadow-sm">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0">{{ card.title }}</h5>
+                            </div>
+                            <div class="card-body">
+                                <p>{{ card.description }}</p>
 
-                <!-- Voting Form -->
-                <form method="post">
-                    {% csrf_token %}
-                    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 mb-4">
-                        {% for card in cards %}
-                        <div class="col">
-                            <div class="card h-100 shadow-sm">
-                                <div class="card-header bg-light">
-                                    <h5 class="mb-0">{{ card.title }}</h5>
-                                </div>
-                                <div class="card-body">
-                                    <p>{{ card.description }}</p>
-                                    {{ vote_form|get_card_field:card }}
-                                </div>
+                                <!-- Vote Status Text with Color -->
+                                {% with status=existing_votes|get_vote_status:card.id %}
+                                <p>Status:
+                                    <strong class="
+                                        {% if status == 'green' %}text-success
+                                        {% elif status == 'yellow' %}text-warning
+                                        {% elif status == 'red' %}text-danger
+                                        {% else %}text-muted{% endif %}">
+                                        {% if status %}
+                                            {{ status|capfirst }}
+                                        {% else %}
+                                            Not Voted
+                                        {% endif %}
+                                    </strong>
+                                </p>
+                                {% endwith %}
+
+                                <!-- Voting Form Field with Colored Labels -->
+                                {% with field=vote_form|get_card_field:card %}
+                                    {% for subwidget in field %}
+                                        <div class="form-check">
+                                            {{ subwidget.tag }}
+                                            <label class="form-check-label 
+                                                {% if 'green' in subwidget.choice_label|lower %}text-success
+                                                {% elif 'yellow' in subwidget.choice_label|lower %}text-warning
+                                                {% elif 'red' in subwidget.choice_label|lower %}text-danger
+                                                {% endif %}"
+                                                for="{{ subwidget.id_for_label }}">
+                                                {{ subwidget.choice_label }}
+                                            </label>
+                                        </div>
+                                    {% endfor %}
+                                {% endwith %}
                             </div>
                         </div>
-                        {% endfor %}
                     </div>
-                    <button type="submit" class="btn btn-success">Submit All Votes</button>
-                </form>
+                    {% endfor %}
+                </div>
+                <button type="submit" class="btn btn-success">Submit All Votes</button>
+            </form>
             {% endif %}
         </div>
     </div>

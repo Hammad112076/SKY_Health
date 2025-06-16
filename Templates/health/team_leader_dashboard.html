@@ -1,5 +1,6 @@
 {% extends 'health/main.html' %}
 {% load static %}
+{% load voting_extras %}
 
 {% block title %}Team Leader Dashboard{% endblock %}
 
@@ -7,107 +8,120 @@
 <div class="container mt-5">
     <h2 class="mb-4 text-center">Team Overview</h2>
 
-    <!-- Team Selection -->
-    <form method="get" class="mb-4">
-        <div class="row g-3 align-items-end">
-            <div class="col-md-8">
-                <label for="team" class="form-label">Choose Your Team</label>
-                <select name="team" id="team" class="form-select" onchange="this.form.submit()">
-                    {% for team in user_teams %}
-                        <option value="{{ team.id }}" {% if selected_team.id == team.id %}selected{% endif %}>{{ team.name }}</option>
-                    {% endfor %}
-                </select>
+    <!-- VOTE BUTTON -->
+    <div class="text-end mb-3">
+        <a href="?vote=1" class="btn btn-primary">Vote</a>
+    </div>
+
+    {% if show_vote_cards %}
+    <!-- VOTING FORM -->
+    <form method="post">
+        {% csrf_token %}
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 mb-4">
+            {% for card in cards %}
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">{{ card.title }}</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>{{ card.description }}</p>
+
+                        {% with field=vote_form|get_card_field:card %}
+                            {% for subwidget in field %}
+                                <div class="form-check">
+                                    {{ subwidget.tag }}
+                                    <label class="form-check-label 
+                                        {% if 'green' in subwidget.choice_label|lower %}text-success
+                                        {% elif 'yellow' in subwidget.choice_label|lower %}text-warning
+                                        {% elif 'red' in subwidget.choice_label|lower %}text-danger
+                                        {% endif %}"
+                                        for="{{ subwidget.id_for_label }}">
+                                        {{ subwidget.choice_label }}
+                                    </label>
+                                </div>
+                            {% endfor %}
+                        {% endwith %}
+                    </div>
+                </div>
             </div>
-            <div class="col-md-4 text-end">
-                {% if selected_team %}
-                    <a href="{% url 'create_session' %}" class="btn btn-success me-2">New Session</a>
-                {% endif %}
-            </div>
+            {% endfor %}
+        </div>
+
+        <div class="text-end">
+            <button type="submit" class="btn btn-success">Submit Votes</button>
         </div>
     </form>
+    {% endif %}
 
-    {% if not selected_team %}
-        <div class="alert alert-info">Please choose a team to view results.</div>
-    {% elif not sessions %}
-        <div class="alert alert-warning">No sessions found for this team. <a href="{% url 'create_session' %}">Create one here</a>.</div>
-    {% else %}
+    <!-- SESSION SELECTOR -->
+    <form method="get" class="mt-4">
+        <label for="session" class="form-label">Select a Session</label>
+        <select name="session" id="session" class="form-select" onchange="this.form.submit()">
+            {% for session in sessions %}
+                <option value="{{ session.id }}" {% if selected_session.id == session.id %}selected{% endif %}>
+                    {{ session.name }} {% if not session.active %}(Closed){% endif %}
+                </option>
+            {% endfor %}
+        </select>
+    </form>
 
-        <!-- Session Selector -->
-        <form method="get" class="mb-4">
-            <input type="hidden" name="team" value="{{ selected_team.id }}">
-            <label for="session" class="form-label">Select a Session</label>
-            <select name="session" id="session" class="form-select" onchange="this.form.submit()">
-                {% for session in sessions %}
-                    <option value="{{ session.id }}" {% if selected_session.id == session.id %}selected{% endif %}>
-                        {{ session.name }} {% if not session.active %}(Closed){% endif %}
-                    </option>
-                {% endfor %}
-            </select>
-        </form>
+    {% if selected_session %}
+    <!-- SESSION INFO + SUMMARY -->
+    <div class="card shadow-sm mb-4 mt-3">
+        <div class="card-header bg-light-primary text-white">
+            <strong>{{ selected_session.name }}</strong> — {{ selected_team.name }}
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-8">
+                    <canvas id="summaryChart" height="200"></canvas>
+                </div>
+                <div class="col-md-4">
+                    <p><strong>Status Breakdown</strong></p>
+                    <div class="mb-2">
+                        <span class="badge bg-success">Green:</span> {{ total_green }}
+                    </div>
+                    <div class="mb-2">
+                        <span class="badge bg-warning">Amber:</span> {{ total_yellow }}
+                    </div>
+                    <div class="mb-2">
+                        <span class="badge bg-danger">Red:</span> {{ total_red }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-        {% if selected_session %}
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-primary text-white">
-                    <strong>{{ selected_session.name }}</strong> — {{ selected_team.name }}
+    <!-- CATEGORIES BREAKDOWN -->
+    <div class="row row-cols-1 row-cols-md-2 g-4">
+        {% for category_id, stats in team_stats.items %}
+        <div class="col">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-light">
+                    <strong>{{ stats.name }}</strong>
                 </div>
                 <div class="card-body">
-                    <p>Created on: {{ selected_session.created_at|date:"M j, Y" }}</p>
-
-                    <div class="row">
-                        <div class="col-md-8">
-                            <canvas id="summaryChart" height="200"></canvas>
+                    <canvas id="categoryChart{{ category_id }}" height="150"></canvas>
+                    <ul class="list-unstyled mt-3">
+                        <li><span class="badge bg-success">Green:</span> {{ stats.vote_counts.green }}</li>
+                        <li><span class="badge bg-warning">Amber:</span> {{ stats.vote_counts.yellow }}</li>
+                        <li><span class="badge bg-danger">Red:</span> {{ stats.vote_counts.red }}</li>
+                    </ul>
+                    {% if stats.comments %}
+                        <hr>
+                        <p class="fw-bold mb-2">Comments:</p>
+                        <div class="small" style="max-height: 100px; overflow-y: auto;">
+                            {% for comment in stats.comments %}
+                                <p><strong>{{ comment.vote|title }}:</strong> {{ comment.comment }}</p>
+                            {% endfor %}
                         </div>
-                        <div class="col-md-4">
-                            <p><strong>Status Breakdown</strong></p>
-                            
-                        <div class="mb-2">
-                            <span class="badge bg-success">Green:</span>
-                                {{ total_green }}
-                            </div>
-                            <div class="mb-2">
-                                <span class="badge bg-warning">Amber:</span>
-                                {{ total_amber }}
-                            </div>
-                            <div class="mb-2">
-                                <span class="badge bg-danger">Red:</span>
-                                {{ total_red }}
-                            </div>
-
-                        </div>
-                    </div>
+                    {% endif %}
                 </div>
             </div>
-
-            <!-- Categories Summary -->
-            <div class="row row-cols-1 row-cols-md-2 g-4">
-                {% for category_id, stats in team_stats.items %}
-                <div class="col">
-                    <div class="card h-100 shadow-sm">
-                        <div class="card-header bg-light">
-                            <strong>{{ stats.name }}</strong>
-                        </div>
-                        <div class="card-body">
-                            <canvas id="categoryChart{{ category_id }}" height="150"></canvas>
-                            <ul class="list-unstyled mt-3">
-                                <li><span class="badge bg-success">Green:</span> {{ stats.vote_counts.green }}</li>
-                                <li><span class="badge bg-warning">Amber:</span> {{ stats.vote_counts.amber }}</li>
-                                <li><span class="badge bg-danger">Red:</span> {{ stats.vote_counts.red }}</li>
-                            </ul>
-                            {% if stats.comments %}
-                                <hr>
-                                <p class="fw-bold mb-2">Comments:</p>
-                                <div class="small" style="max-height: 100px; overflow-y: auto;">
-                                    {% for comment in stats.comments %}
-                                        <p><strong>{{ comment.vote|title }}:</strong> {{ comment.comment }}</p>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        {% endif %}
+        </div>
+        {% endfor %}
+    </div>
     {% endif %}
 </div>
 {% endblock %}
@@ -115,6 +129,4 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="{% static 'js/charts.js' %}"></script>
-<script>
-</script>
 {% endblock %}

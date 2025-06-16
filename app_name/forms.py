@@ -21,7 +21,7 @@ class Meta:
 class SessionForm(forms.ModelForm):
     class Meta:
         model = Session
-        fields = ['name', 'start_time', 'end_time', 'is_active']
+        fields = ['name', 'start_time', 'end_time']
         widgets = {
             'start_time': DateTimeInput(attrs={'type': 'datetime-local'}),
             'end_time': DateTimeInput(attrs={'type': 'datetime-local'}),
