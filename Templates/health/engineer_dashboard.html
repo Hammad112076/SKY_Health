@@ -1,0 +1,86 @@
+{% extends 'health/main.html' %}
+{% load voting_extras %}
+
+{% block title %}Engineer Voting Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Team Health Voting</h1>
+            <span class="badge bg-primary fs-5">Engineer Dashboard</span>
+
+            <!-- Session Info -->
+            <div class="card shadow-sm my-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Voting Session</h5>
+                </div>
+                <div class="card-body">
+                    {% if not selected_session %}
+                        <div class="alert alert-info mb-0">No active voting session available.</div>
+                    {% else %}
+                        <p><strong>Current Session:</strong> {{ selected_session.name }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if selected_session %}
+                <!-- Progress -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Your Voting Progress</h5>
+                    </div>
+                    <div class="card-body">
+                        {% with voted_count=user_votes|length total_cards=cards|length %}
+                            <div class="progress mb-3" style="height: 24px;">
+                                <div class="progress-bar bg-success"
+                                     role="progressbar"
+                                     aria-valuenow="{{ voted_count }}"
+                                     aria-valuemin="0"
+                                     aria-valuemax="{{ total_cards }}">
+                                    {{ voted_count }} / {{ total_cards }} Completed
+                                </div>
+                            </div>
+                            {% if voted_count == total_cards %}
+                                <div class="alert alert-success">All votes submitted.</div>
+                            {% else %}
+                                <div class="alert alert-warning">{{ total_cards|subtract:voted_count }} votes remaining.</div>
+                            {% endif %}
+                        {% endwith %}
+                    </div>
+                </div>
+
+                <!-- Cards to Vote -->
+                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                    {% for card in cards %}
+                        {% with vote_status=user_votes|get_vote_status:card.id %}
+                        <div class="col">
+                            <div class="card h-100 {% if not vote_status %}border-warning{% endif %}">
+                                <div class="card-header bg-light">
+                                    <h5 class="mb-0">{{ card.title }}</h5>
+                                </div>
+                                <div class="card-body">
+                                    <p>{{ card.description }}</p>
+                                    <p>Status:
+                                        <strong class="{% if vote_status == 'green' %}text-success
+                                                        {% elif vote_status == 'yellow' %}text-warning
+                                                        {% elif vote_status == 'red' %}text-danger
+                                                        {% else %}text-muted{% endif %}">
+                                            {% if vote_status %}
+                                                {{ vote_status|capfirst }}
+                                            {% else %}
+                                                Not Voted
+                                            {% endif %}
+                                        </strong>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endwith %}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

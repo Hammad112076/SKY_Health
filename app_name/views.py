@@ -1,12 +1,12 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from .models import Profile, HealthCard, Session, Vote
+from .models import Profile, HealthCard, Session, Vote, Team
 from .forms import RegisterForm, SessionForm, VoteForm
 from .forms import SessionForm
-
 from collections import defaultdict
+
 
 @login_required
 def create_session_view(request):
@@ -53,7 +53,7 @@ def login_view(request):
             if user_role == 'team_leader':
                 return redirect('team_leader_dashboard')  
             elif user_role == 'engineer':
-                return redirect('vote')  
+                return redirect('engineer_dashboard')
         else:
             messages.error(request, 'Invalid username or password.')
 
@@ -94,33 +94,6 @@ def manage_sessions(request):
     return render(request, 'health/manage_sessions.html', {'form': form, 'sessions': sessions})
 
 
-@login_required
-def vote_view(request):
-    if request.user.profile.role != 'engineer':
-        return redirect('dashboard')
-
-    session = Session.objects.filter(is_active=True).last()
-    if not session:
-        return render(request, 'health/no_active_session.html')
-
-    cards = HealthCard.objects.all()
-    if request.method == 'POST':
-        form = VoteForm(cards, request.POST)
-        if form.is_valid():
-            for card in cards:
-                color = form.cleaned_data[f'card_{card.id}']
-                Vote.objects.update_or_create(
-                    user=request.user,
-                    session=session,
-                    card=card,
-                    defaults={'color': color}
-                )
-            messages.success(request, "Vote submitted.")
-            return redirect('summary')
-    else:
-        form = VoteForm(cards)
-
-    return render(request, 'health/vote.html', {'form': form, 'session': session})
 
 
 @login_required
@@ -250,8 +223,25 @@ def team_leader_dashboard_view(request):
     return render(request, 'health/team_leader_dashboard.html', context)
 
 
-
 @login_required
-def engineer_dashboard_view(request):
-    # Your logic for the engineer dashboard (you may already have one like vote_view)
-    return render(request, 'health/engineer_dashboard.html')  # or 'health/vote.html'
+def engineer_dashboard(request):
+    profile = request.user.profile
+    team = profile.team
+    selected_session = None
+    cards = HealthCard.objects.all()
+    user_votes = []
+    user_vote_comments = {}
+
+    if team:
+        selected_session = Session.objects.filter(is_active=True).last()
+        if selected_session and selected_session.is_current():
+            user_votes = Vote.objects.filter(user=request.user, session=selected_session)
+            user_vote_comments = {vote.card.id: vote.comment for vote in user_votes}
+
+    context = {
+        'selected_session': selected_session,
+        'cards': cards,
+        'user_votes': user_votes,
+        'user_votes_comments': user_vote_comments,
+    }
+    return render(request, 'health/engineer_dashboard.html', context)
