@@ -12,7 +12,6 @@
             {% if user.profile.role == 'team_leader' %}Team Leader{% else %}Engineer{% endif %} Dashboard
             </span>
 
-
             <!-- Session Info -->
             <div class="card shadow-sm my-4">
                 <div class="card-header bg-primary text-white">
@@ -27,10 +26,11 @@
                 </div>
             </div>
 
-            {% if selected_session %}
+            {% if selected_session and vote_form %}
             <!-- Voting Form -->
             <form method="post">
                 {% csrf_token %}
+                <input type="hidden" name="session_id" value="{{ selected_session.id }}">
                 <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 mb-4">
                     {% for card in cards %}
                     <div class="col">
@@ -41,31 +41,30 @@
                             <div class="card-body">
                                 <p>{{ card.description }}</p>
 
-                                <!-- Vote Status Text with Color -->
+                                <!-- Vote Status -->
                                 {% with status=existing_votes|get_vote_status:card.id %}
-                                <p>Status:
-                                    <strong class="
-                                        {% if status == 'green' %}text-success
-                                        {% elif status == 'yellow' %}text-warning
-                                        {% elif status == 'red' %}text-danger
-                                        {% else %}text-muted{% endif %}">
-                                        {% if status %}
-                                            {{ status|capfirst }}
-                                        {% else %}
-                                            Not Voted
-                                        {% endif %}
-                                    </strong>
-                                </p>
+                                    {% if status in 'green amber red' %}
+                                        <p>Status:
+                                            <strong class="
+                                                {% if status == 'green' %}text-success
+                                                {% elif status == 'amber' %}text-warning
+                                                {% elif status == 'red' %}text-danger{% endif %}">
+                                                {{ status|capfirst }}
+                                            </strong>
+                                        </p>
+                                    {% else %}
+                                        <p>Status: <strong class="text-muted">Not Voted</strong></p>
+                                    {% endif %}
                                 {% endwith %}
 
-                                <!-- Voting Form Field with Colored Labels -->
+                                <!-- Vote Options -->
                                 {% with field=vote_form|get_card_field:card %}
                                     {% for subwidget in field %}
                                         <div class="form-check">
                                             {{ subwidget.tag }}
                                             <label class="form-check-label 
                                                 {% if 'green' in subwidget.choice_label|lower %}text-success
-                                                {% elif 'yellow' in subwidget.choice_label|lower %}text-warning
+                                                {% elif 'amber' in subwidget.choice_label|lower %}text-warning
                                                 {% elif 'red' in subwidget.choice_label|lower %}text-danger
                                                 {% endif %}"
                                                 for="{{ subwidget.id_for_label }}">

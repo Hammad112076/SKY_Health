@@ -95,19 +95,27 @@ def team_leader_dashboard_view(request):
 
     team = profile.team
     sessions = Session.objects.filter(created_by=user).order_by('-start_time')
-    selected_session = sessions.first()
+
+    session_id = request.POST.get('session_id') or request.GET.get('session')
+    selected_session = None
+    if session_id:
+        selected_session = sessions.filter(id=session_id).first()
+    if not selected_session:
+        selected_session = sessions.first()
+
     show_vote_cards = request.GET.get('vote') == '1'
 
     team_stats = defaultdict(lambda: {
         'name': '',
-        'vote_counts': {'green': 0, 'yellow': 0, 'red': 0},
+        'vote_counts': {'green': 0, 'amber': 0, 'red': 0},
+        'comments': [],
         'icon': 'fas fa-chart-pie'
     })
 
     cards = HealthCard.objects.all()
-    
+
     if request.method == 'POST' and selected_session and show_vote_cards:
-        form = VoteForm(cards, request.POST)
+        form = VoteForm(request.POST, cards=cards)
         if form.is_valid():
             for card in cards:
                 field_name = f'card_{card.id}'
@@ -119,11 +127,10 @@ def team_leader_dashboard_view(request):
                     defaults={'color': color}
                 )
             messages.success(request, 'Your votes have been submitted.')
-            return redirect('team_leader_dashboard')
+            return redirect(f"{request.path}?session={selected_session.id}&vote=1")
     else:
-        form = VoteForm(cards)
+        form = VoteForm(cards=cards)
 
-    # Generate stats only if session exists
     if selected_session and team:
         for card in cards:
             votes = Vote.objects.filter(
@@ -134,7 +141,7 @@ def team_leader_dashboard_view(request):
             )
             vote_counts = {
                 'green': votes.filter(color='green').count(),
-                'yellow': votes.filter(color='yellow').count(),
+                'amber': votes.filter(color='amber').count(),
                 'red': votes.filter(color='red').count(),
             }
             team_stats[card.id] = {
@@ -143,65 +150,20 @@ def team_leader_dashboard_view(request):
                 'icon': getattr(card, 'icon_class', 'fas fa-circle')
             }
 
-    total_red = sum(stat['vote_counts'].get('red', 0) for stat in team_stats.values())
-    total_yellow = sum(stat['vote_counts'].get('yellow', 0) for stat in team_stats.values())
-    total_green = sum(stat['vote_counts'].get('green', 0) for stat in team_stats.values())
-    total_votes = total_red + total_yellow + total_green
-
     context = {
         'selected_team': team,
-        'selected_session': selected_session,
         'sessions': sessions,
-        'team_stats': dict(team_stats),
-        'total_red': total_red,
-        'total_yellow': total_yellow,
-        'total_green': total_green,
-        'total_votes': total_votes,
-        'vote_form': form,
+        'selected_session': selected_session,
         'cards': cards,
+        'vote_form': form,
         'show_vote_cards': show_vote_cards,
+        'team_stats': dict(team_stats),
+        'total_green': sum(s['vote_counts']['green'] for s in team_stats.values()),
+        'total_amber': sum(s['vote_counts']['amber'] for s in team_stats.values()),
+        'total_red': sum(s['vote_counts']['red'] for s in team_stats.values()),
     }
 
     return render(request, 'health/team_leader_dashboard.html', context)
-
-@login_required
-def engineer_dashboard(request):
-    profile = request.user.profile
-    team = profile.team
-    selected_session = Session.objects.filter(is_active=True).last()
-    cards = HealthCard.objects.all()
-    user_votes = []
-    existing_votes = {}
-
-    if selected_session and selected_session.is_current():
-        user_votes = Vote.objects.filter(user=request.user, session=selected_session)
-        existing_votes = {vote.card.id: vote.color for vote in user_votes}
-
-    if request.method == 'POST':
-        form = VoteForm(cards, request.POST)
-        if form.is_valid():
-            for card in cards:
-                field_name = f'card_{card.id}'
-                color = form.cleaned_data.get(field_name)
-                Vote.objects.update_or_create(
-                    user=request.user,
-                    session=selected_session,
-                    card=card,
-                    defaults={'color': color}
-                )
-            messages.success(request, 'All votes submitted successfully.')
-            return redirect('engineer_dashboard')
-    else:
-        form = VoteForm(cards)
-
-    context = {
-        'selected_session': selected_session,
-        'cards': cards,
-        'user_votes': user_votes,
-        'existing_votes': existing_votes,
-        'vote_form': form
-    }
-    return render(request, 'health/engineer_dashboard.html', context)
 
 @login_required
 def team_summary_view(request):
@@ -221,7 +183,7 @@ def team_summary_view(request):
 
     team_stats = defaultdict(lambda: {
         'name': '',
-        'vote_counts': {'green': 0, 'yellow': 0, 'red': 0},
+        'vote_counts': {'green': 0, 'amber': 0, 'red': 0},
         'comments': [],
         'icon': 'fas fa-chart-pie'
     })
@@ -230,10 +192,11 @@ def team_summary_view(request):
         cards = HealthCard.objects.all()
         for card in cards:
             votes = Vote.objects.filter(session=selected_session, card=card)
-            vote_counts = {'green': 0, 'yellow': 0, 'red': 0}
+            vote_counts = {'green': 0, 'amber': 0, 'red': 0}
             comments = []
             for vote in votes:
-                vote_counts[vote.color] += 1
+                if vote.color in vote_counts:
+                    vote_counts[vote.color] += 1
                 if hasattr(vote, 'comment') and vote.comment:
                     comments.append({'vote': vote.color, 'comment': vote.comment})
             team_stats[card.id] = {
@@ -250,3 +213,53 @@ def team_summary_view(request):
         'team_stats': dict(team_stats),
     }
     return render(request, 'health/team_summary.html', context)
+
+@login_required
+def engineer_dashboard(request):
+    user = request.user
+
+    if user.profile.role != 'engineer':
+        return redirect('dashboard')
+
+    team = user.profile.team
+
+    sessions = Session.objects.filter(created_by__profile__team=team).order_by('-start_time')
+    selected_session = sessions.first()
+
+    show_vote_cards = request.GET.get('vote') == '1'
+    cards = HealthCard.objects.all()
+    existing_votes = {}
+
+    if selected_session:
+        existing_votes_queryset = Vote.objects.filter(session=selected_session, user=user)
+        for vote in existing_votes_queryset:
+            existing_votes[vote.card.id] = vote.color
+
+    if request.method == 'POST' and selected_session and show_vote_cards:
+        form = VoteForm(request.POST, cards=cards)
+        if form.is_valid():
+            for card in cards:
+                color = form.cleaned_data.get(f'card_{card.id}')
+                if color:
+                    Vote.objects.update_or_create(
+                        user=user,
+                        session=selected_session,
+                        card=card,
+                        defaults={'color': color}
+                    )
+            messages.success(request, 'Votes submitted successfully.')
+            return redirect('engineer_dashboard')
+    else:
+        form = VoteForm(cards=cards)
+
+    context = {
+        'user': user,
+        'cards': cards,
+        'sessions': sessions,
+        'selected_session': selected_session,
+        'show_vote_cards': show_vote_cards,
+        'vote_form': form,
+        'existing_votes': existing_votes,
+    }
+
+    return render(request, 'health/engineer_dashboard.html', context)

@@ -11,7 +11,7 @@ class TeamAdmin(admin.ModelAdmin):
 class ProfileAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'role', 'team')
     list_filter = ('role', 'team')
-    search_fields = ('user__username',)
+    search_fields = ('user__username', 'team__name')
 
 
 @admin.register(HealthCard)
@@ -23,12 +23,12 @@ class HealthCardAdmin(admin.ModelAdmin):
 @admin.register(Session)
 class SessionAdmin(admin.ModelAdmin):
     list_display = ('id', 'name', 'created_by', 'start_time', 'end_time', 'is_active')
-    list_filter = ('is_active',)
+    list_filter = ('is_active', 'start_time')
     search_fields = ('name', 'created_by__username')
 
 
 @admin.register(Vote)
 class VoteAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'session', 'card', 'color')
-    list_filter = ('color', 'session')
+    list_filter = ('color', 'session', 'card')
     search_fields = ('user__username', 'card__title', 'session__name')

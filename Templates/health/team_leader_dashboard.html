@@ -33,7 +33,7 @@
                                     {{ subwidget.tag }}
                                     <label class="form-check-label 
                                         {% if 'green' in subwidget.choice_label|lower %}text-success
-                                        {% elif 'yellow' in subwidget.choice_label|lower %}text-warning
+                                        {% elif 'amber' in subwidget.choice_label|lower %}text-warning
                                         {% elif 'red' in subwidget.choice_label|lower %}text-danger
                                         {% endif %}"
                                         for="{{ subwidget.id_for_label }}">
@@ -69,7 +69,7 @@
     {% if selected_session %}
     <!-- SESSION INFO + SUMMARY -->
     <div class="card shadow-sm mb-4 mt-3">
-        <div class="card-header bg-light-primary text-white">
+        <div class="card-header bg-primary text-white">
             <strong>{{ selected_session.name }}</strong> — {{ selected_team.name }}
         </div>
         <div class="card-body">
@@ -79,15 +79,9 @@
                 </div>
                 <div class="col-md-4">
                     <p><strong>Status Breakdown</strong></p>
-                    <div class="mb-2">
-                        <span class="badge bg-success">Green:</span> {{ total_green }}
-                    </div>
-                    <div class="mb-2">
-                        <span class="badge bg-warning">Amber:</span> {{ total_yellow }}
-                    </div>
-                    <div class="mb-2">
-                        <span class="badge bg-danger">Red:</span> {{ total_red }}
-                    </div>
+                    <div class="mb-2"><span class="badge bg-success text-white">Green</span>: {{ total_green }}</div>
+                    <div class="mb-2"><span class="badge bg-warning text-dark">Amber</span>: {{ total_amber }}</div>
+                    <div class="mb-2"><span class="badge bg-danger text-white">Red</span>: {{ total_red }}</div>
                 </div>
             </div>
         </div>
@@ -102,12 +96,40 @@
                     <strong>{{ stats.name }}</strong>
                 </div>
                 <div class="card-body">
-                    <canvas id="categoryChart{{ category_id }}" height="150"></canvas>
-                    <ul class="list-unstyled mt-3">
-                        <li><span class="badge bg-success">Green:</span> {{ stats.vote_counts.green }}</li>
-                        <li><span class="badge bg-warning">Amber:</span> {{ stats.vote_counts.yellow }}</li>
-                        <li><span class="badge bg-danger">Red:</span> {{ stats.vote_counts.red }}</li>
+                    {% with total=stats.vote_counts.green|add:stats.vote_counts.amber|add:stats.vote_counts.red %}
+                        {% if total > 0 %}
+                        <div class="progress mb-3" style="height: 25px;">
+                            {% with gp=stats.vote_counts.green|divide:total|multiply:100 %}
+                            <div class="progress-bar bg-success" role="progressbar" style="width: {{ gp }}%">
+                                Green: {{ stats.vote_counts.green }}
+                            </div>
+                            {% endwith %}
+
+                            {% with ap=stats.vote_counts.amber|divide:total|multiply:100 %}
+                            <div class="progress-bar bg-warning text-dark" role="progressbar" style="width: {{ ap }}%">
+                                Amber: {{ stats.vote_counts.amber }}
+                            </div>
+                            {% endwith %}
+
+                            {% with rp=stats.vote_counts.red|divide:total|multiply:100 %}
+                            <div class="progress-bar bg-danger" role="progressbar" style="width: {{ rp }}%">
+                                Red: {{ stats.vote_counts.red }}
+                            </div>
+                            {% endwith %}
+                        </div>
+                        {% else %}
+                        <div class="progress mb-3" style="height: 25px;">
+                            <div class="progress-bar bg-secondary" style="width: 100%;">No votes yet</div>
+                        </div>
+                        {% endif %}
+                    {% endwith %}
+
+                    <ul class="list-unstyled mt-2">
+                        <li><span class="badge bg-success text-white">Green</span>: {{ stats.vote_counts.green }}</li>
+                        <li><span class="badge bg-warning text-dark">Amber</span>: {{ stats.vote_counts.amber }}</li>
+                        <li><span class="badge bg-danger text-white">Red</span>: {{ stats.vote_counts.red }}</li>
                     </ul>
+
                     {% if stats.comments %}
                         <hr>
                         <p class="fw-bold mb-2">Comments:</p>
@@ -122,11 +144,13 @@
         </div>
         {% endfor %}
     </div>
+    {% else %}
+    <div class="alert alert-info mt-3">Please select a session to view details.</div>
     {% endif %}
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>      
 <script src="{% static 'js/charts.js' %}"></script>
 {% endblock %}

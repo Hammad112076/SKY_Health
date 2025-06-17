@@ -2,22 +2,28 @@ from django import forms
 from django.forms.widgets import DateTimeInput
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
-from .models import Profile, Session, Vote
-from .models import Team
+from .models import Profile, Session, Vote, Team
 
+# -----------------------------
+# Register Form
+# -----------------------------
 class RegisterForm(UserCreationForm):
-    email = forms.EmailField()
-    role = forms.ChoiceField(choices=Profile.ROLE_CHOICES)
+    email = forms.EmailField(required=True)
+    role = forms.ChoiceField(choices=Profile.ROLE_CHOICES, required=True)
     team = forms.ModelChoiceField(
-        queryset=Team.objects.all(),  # Show all available teams
+        queryset=Team.objects.all(),
         required=True,
         label="Team"
     )
-class Meta:
+
+    class Meta:
         model = User
         fields = ['username', 'email', 'password1', 'password2', 'role', 'team']
 
 
+# -----------------------------
+# Session Creation Form
+# -----------------------------
 class SessionForm(forms.ModelForm):
     class Meta:
         model = Session
@@ -26,16 +32,20 @@ class SessionForm(forms.ModelForm):
             'start_time': DateTimeInput(attrs={'type': 'datetime-local'}),
             'end_time': DateTimeInput(attrs={'type': 'datetime-local'}),
         }
-        
+
+
+# -----------------------------
+# Vote Form (Dynamic Fields Per Card)
+# -----------------------------
 class VoteForm(forms.Form):
-    def __init__(self, cards, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
+        cards = kwargs.pop('cards', [])
         super().__init__(*args, **kwargs)
+
         for card in cards:
             self.fields[f'card_{card.id}'] = forms.ChoiceField(
                 label=card.title,
-                choices=Vote.COLOR_CHOICES,
+                choices=Vote.COLOR_CHOICES,  # ['red', 'amber', 'green']
                 widget=forms.RadioSelect,
-                required=True
+                required=False  # Optional voting
             )
-
-            
