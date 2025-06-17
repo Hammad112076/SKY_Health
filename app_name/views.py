@@ -136,8 +136,7 @@ def team_leader_dashboard_view(request):
             votes = Vote.objects.filter(
                 session=selected_session,
                 card=card,
-                user__profile__team=team,
-                user__profile__role='engineer'
+                user__profile__team=team
             )
             vote_counts = {
                 'green': votes.filter(color='green').count(),
@@ -180,30 +179,45 @@ def team_summary_view(request):
             selected_session = sessions.get(id=session_id)
         except Session.DoesNotExist:
             selected_session = None
+    else:
+        selected_session = sessions.first()
 
     team_stats = defaultdict(lambda: {
         'name': '',
         'vote_counts': {'green': 0, 'amber': 0, 'red': 0},
         'comments': [],
-        'icon': 'fas fa-chart-pie'
+        'icon': 'fas fa-chart-pie',
+        'color': 'secondary',
     })
 
     if selected_session:
         cards = HealthCard.objects.all()
         for card in cards:
-            votes = Vote.objects.filter(session=selected_session, card=card)
+            votes = Vote.objects.filter(
+                session=selected_session,
+                card=card,
+                user__profile__team=team,
+                user__profile__role='engineer'  # only engineer votes
+            )
+
             vote_counts = {'green': 0, 'amber': 0, 'red': 0}
             comments = []
+
             for vote in votes:
                 if vote.color in vote_counts:
                     vote_counts[vote.color] += 1
-                if hasattr(vote, 'comment') and vote.comment:
+                if vote.comment:
                     comments.append({'vote': vote.color, 'comment': vote.comment})
+
+            # Dominant color used for icon badge
+            dominant_color = max(vote_counts, key=vote_counts.get) if sum(vote_counts.values()) > 0 else 'secondary'
+
             team_stats[card.id] = {
                 'name': card.title,
                 'vote_counts': vote_counts,
                 'comments': comments,
-                'icon': getattr(card, 'icon_class', 'fas fa-circle')
+                'icon': getattr(card, 'icon_class', 'fas fa-circle'),
+                'color': dominant_color,
             }
 
     context = {
