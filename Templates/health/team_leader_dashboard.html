@@ -1,20 +1,29 @@
+{# Extend the base layout for shared styles and structure #}
 {% extends 'health/main.html' %}
+
+{# Load static files and custom template filters #}
 {% load static %}
 {% load voting_extras %}
 
+{# Set the browser tab title dynamically #}
 {% block title %}Team Leader Dashboard{% endblock %}
 
+{# Start of the main content block #}
 {% block content %}
 <div class="container mt-5">
     <h2 class="mb-4 text-center">Team Overview</h2>
 
-    <!-- VOTE BUTTON -->
+    {# ----------------------------- #}
+    {# Vote Button (triggers vote form display via GET parameter) #}
+    {# ----------------------------- #}
     <div class="text-end mb-3">
         <a href="?vote=1" class="btn btn-primary">Vote</a>
     </div>
 
+    {# ----------------------------- #}
+    {# Voting Form (visible only when 'vote=1' in query string) #}
+    {# ----------------------------- #}
     {% if show_vote_cards %}
-    <!-- VOTING FORM -->
     <form method="post">
         {% csrf_token %}
         <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 mb-4">
@@ -27,6 +36,7 @@
                     <div class="card-body">
                         <p>{{ card.description }}</p>
 
+                        {# Dynamically render vote choices (radio buttons) per card #}
                         {% with field=vote_form|get_card_field:card %}
                             {% for subwidget in field %}
                                 <div class="form-check">
@@ -54,7 +64,9 @@
     </form>
     {% endif %}
 
-    <!-- SESSION SELECTOR -->
+    {# ----------------------------- #}
+    {# Session Selector Dropdown #}
+    {# ----------------------------- #}
     <form method="get" class="mt-4">
         <label for="session" class="form-label">Select a Session</label>
         <select name="session" id="session" class="form-select" onchange="this.form.submit()">
@@ -66,8 +78,10 @@
         </select>
     </form>
 
+    {# ----------------------------- #}
+    {# Session Summary & Chart (visible if session is selected) #}
+    {# ----------------------------- #}
     {% if selected_session %}
-    <!-- SESSION INFO + SUMMARY -->
     <div class="card shadow-sm mb-4 mt-3">
         <div class="card-header bg-primary text-white">
             <strong>{{ selected_session.name }}</strong> — {{ selected_team.name }}
@@ -75,7 +89,7 @@
         <div class="card-body">
             <div class="row">
                 <div class="col-md-8">
-                    <canvas id="summaryChart" height="200"></canvas>
+                    <canvas id="summaryChart" height="200"></canvas> {# Chart rendered by JS #}
                 </div>
                 <div class="col-md-4">
                     <p><strong>Status Breakdown</strong></p>
@@ -87,7 +101,9 @@
         </div>
     </div>
 
-    <!-- CATEGORIES BREAKDOWN -->
+    {# ----------------------------- #}
+    {# Card-by-Card Voting Breakdown + Comments #}
+    {# ----------------------------- #}
     <div class="row row-cols-1 row-cols-md-2 g-4">
         {% for category_id, stats in team_stats.items %}
         <div class="col">
@@ -99,18 +115,21 @@
                     {% with total=stats.vote_counts.green|add:stats.vote_counts.amber|add:stats.vote_counts.red %}
                         {% if total > 0 %}
                         <div class="progress mb-3" style="height: 25px;">
+                            {# Green bar #}
                             {% with gp=stats.vote_counts.green|divide:total|multiply:100 %}
                             <div class="progress-bar bg-success" role="progressbar" style="width: {{ gp }}%">
                                 Green: {{ stats.vote_counts.green }}
                             </div>
                             {% endwith %}
 
+                            {# Amber bar #}
                             {% with ap=stats.vote_counts.amber|divide:total|multiply:100 %}
                             <div class="progress-bar bg-warning text-dark" role="progressbar" style="width: {{ ap }}%">
                                 Amber: {{ stats.vote_counts.amber }}
                             </div>
                             {% endwith %}
 
+                            {# Red bar #}
                             {% with rp=stats.vote_counts.red|divide:total|multiply:100 %}
                             <div class="progress-bar bg-danger" role="progressbar" style="width: {{ rp }}%">
                                 Red: {{ stats.vote_counts.red }}
@@ -124,12 +143,14 @@
                         {% endif %}
                     {% endwith %}
 
+                    {# Text summary of counts #}
                     <ul class="list-unstyled mt-2">
                         <li><span class="badge bg-success text-white">Green</span>: {{ stats.vote_counts.green }}</li>
                         <li><span class="badge bg-warning text-dark">Amber</span>: {{ stats.vote_counts.amber }}</li>
                         <li><span class="badge bg-danger text-white">Red</span>: {{ stats.vote_counts.red }}</li>
                     </ul>
 
+                    {# Optional Comments Section #}
                     {% if stats.comments %}
                         <hr>
                         <p class="fw-bold mb-2">Comments:</p>
@@ -150,6 +171,7 @@
 </div>
 {% endblock %}
 
+{# JavaScript for rendering charts dynamically using Chart.js #}
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>      
 <script src="{% static 'js/charts.js' %}"></script>

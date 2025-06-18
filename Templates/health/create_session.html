@@ -1,11 +1,15 @@
+{# Inherit from the base layout template #}
 {% extends 'health/main.html' %}
 
+{# Main content block starts here #}
 {% block content %}
 <div class="row justify-content-center align-items-start mt-4">
     <div class="col-md-10">
         <div class="d-flex shadow-lg rounded bg-white overflow-hidden">
-            
-            <!-- Left side: info panel -->
+
+            {# ------------------------------ #}
+            {# LEFT: Information / Instructions Panel (hidden on mobile) #}
+            {# ------------------------------ #}
             <div class="bg-primary text-white p-4 d-none d-md-block" style="width: 35%;">
                 <h4 class="mb-4">Start a Voting Session</h4>
                 <p>Create a session for your team to assess progress and share feedback.</p>
@@ -16,59 +20,70 @@
                 </ul>
             </div>
 
-            <!-- Right side: form panel -->
-<div class="flex-grow-1 p-4">
-    <h3 class="mb-4 text-primary">Session Form</h3>
-    
-    <form method="post" novalidate>
-        {% csrf_token %}
+            {# ------------------------------ #}
+            {# RIGHT: Voting Session Form Panel #}
+            {# ------------------------------ #}
+            <div class="flex-grow-1 p-4">
+                <h3 class="mb-4 text-primary">Session Form</h3>
 
-        {% if form.errors %}
-            <div class="alert alert-warning">
-                <h5 class="alert-heading">Please correct the following:</h5>
-                <ul class="mb-0">
-                    {% for field in form %}
-                        {% for error in field.errors %}
-                            <li><strong>{{ field.label }}:</strong> {{ error }}</li>
-                        {% endfor %}
-                    {% endfor %}
-                    {% for error in form.non_field_errors %}
-                        <li><strong>Error:</strong> {{ error }}</li>
-                    {% endfor %}
-                </ul>
+                {# Form starts here - method POST, CSRF protected #}
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    {# Display form validation errors if present #}
+                    {% if form.errors %}
+                        <div class="alert alert-warning">
+                            <h5 class="alert-heading">Please correct the following:</h5>
+                            <ul class="mb-0">
+                                {% for field in form %}
+                                    {% for error in field.errors %}
+                                        <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                                    {% endfor %}
+                                {% endfor %}
+                                {% for error in form.non_field_errors %}
+                                    <li><strong>Error:</strong> {{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+
+                    {# Input field: Session name #}
+                    <div class="mb-3">
+                        {{ form.name.label_tag }}
+                        {{ form.name }}
+                    </div>
+
+                    {# Input field: Start time #}
+                    <div class="mb-3">
+                        {{ form.start_time.label_tag }}
+                        {{ form.start_time }}
+                    </div>
+
+                    {# Input field: End time #}
+                    <div class="mb-3">
+                        {{ form.end_time.label_tag }}
+                        {{ form.end_time }}
+                    </div>
+
+                    {# Navigation buttons: Back and Submit #}
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{% url 'dashboard' %}" class="btn btn-outline-dark">Back to Dashboard</a>
+                        <button type="submit" class="btn btn-success">Create Session</button>
+                    </div>
+
+                </form>
             </div>
-        {% endif %}
-
-        <div class="mb-3">
-            {{ form.name.label_tag }}
-            {{ form.name }}
-        </div>
-
-        <div class="mb-3">
-            {{ form.start_time.label_tag }}
-            {{ form.start_time }}
-        </div>
-
-        <div class="mb-3">
-            {{ form.end_time.label_tag }}
-            {{ form.end_time }}
-        </div>
-
-        <div class="d-flex justify-content-between mt-4">
-    <a href="{% url 'dashboard' %}" class="btn btn-outline-dark">Back to Dashboard</a>
-    <button type="submit" class="btn btn-success">Create Session</button>
-</div>
-
-    </form>
-</div>
         </div>
     </div>
 </div>
 {% endblock %}
 
+
+{# Optional JS Enhancements Block (input styling and datetime-local enforcement) #}
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Add Bootstrap form styles dynamically
     const inputs = document.querySelectorAll('input, select');
     inputs.forEach(input => {
         if (input.tagName === 'SELECT') {
@@ -78,6 +93,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // Ensure the end_time input uses datetime-local type for compatibility
     const endDate = document.querySelector('[name="end_time"]');
     if (endDate) {
         endDate.setAttribute('type', 'datetime-local');

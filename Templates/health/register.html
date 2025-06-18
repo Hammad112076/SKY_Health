@@ -1,22 +1,33 @@
+{# Inherit layout from the base template #}
 {% extends 'health/main.html' %}
+
+{# Set the page title to "Register" #}
 {% block title %}Register{% endblock %}
 
+{# Begin main content block #}
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-6">
+
+        {# Page heading #}
         <h3 class="text-center mb-4">Register</h3>
 
+        {# Begin registration form #}
         <form method="post" novalidate>
             {% csrf_token %}
 
+            {# Display form errors, field-specific and global #}
             {% if form.errors %}
                 <div class="alert alert-danger">
                     <ul class="mb-0">
+                        {# Loop through individual field errors #}
                         {% for field in form %}
                             {% for error in field.errors %}
                                 <li><strong>{{ field.label }}:</strong> {{ error }}</li>
                             {% endfor %}
                         {% endfor %}
+
+                        {# Display any non-field-specific errors #}
                         {% for error in form.non_field_errors %}
                             <li>{{ error }}</li>
                         {% endfor %}
@@ -24,36 +35,43 @@
                 </div>
             {% endif %}
 
+            {# First Name input (manual, not part of the original form fields) #}
             <div class="mb-3">
                 <label for="id_first_name" class="form-label">First Name</label>
                 <input type="text" name="first_name" id="id_first_name" class="form-control" required>
             </div>
 
+            {# Last Name input (manual) #}
             <div class="mb-3">
                 <label for="id_last_name" class="form-label">Last Name</label>
                 <input type="text" name="last_name" id="id_last_name" class="form-control" required>
             </div>
 
+            {# Username input #}
             <div class="mb-3">
                 <label for="id_username" class="form-label">Username</label>
                 <input type="text" name="username" id="id_username" class="form-control" required>
             </div>
 
+            {# Email input #}
             <div class="mb-3">
                 <label for="id_email" class="form-label">Email</label>
                 <input type="email" name="email" id="id_email" class="form-control" required>
             </div>
 
+            {# Password input #}
             <div class="mb-3">
                 <label for="id_password1" class="form-label">Password</label>
                 <input type="password" name="password1" id="id_password1" class="form-control" required>
             </div>
 
+            {# Confirm password input #}
             <div class="mb-3">
                 <label for="id_password2" class="form-label">Confirm Password</label>
                 <input type="password" name="password2" id="id_password2" class="form-control" required>
             </div>
 
+            {# Role selection (Team Leader or Engineer) #}
             <div class="mb-3">
                 <label for="id_role" class="form-label">Role</label>
                 <select name="role" id="id_role" class="form-select" required>
@@ -63,6 +81,7 @@
                 </select>
             </div>
 
+            {# Team selection dropdown (populated from queryset) #}
             <div class="mb-3">
                 <label for="id_team" class="form-label">Team</label>
                 <select name="team" id="id_team" class="form-select" required>
@@ -73,10 +92,12 @@
                 </select>
             </div>
 
+            {# Submit button (full width) #}
             <div class="d-grid gap-2 mb-3">
                 <button type="submit" class="btn btn-dark">Register</button>
             </div>
 
+            {# Navigation link back to login page #}
             <div class="text-center">
                 <a href="{% url 'login' %}" class="btn btn-sm btn-outline-secondary">Back to Login</a>
             </div>

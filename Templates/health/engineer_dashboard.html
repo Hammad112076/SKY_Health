@@ -1,24 +1,34 @@
+{# Extend the base layout to maintain consistent UI #}
 {% extends 'health/main.html' %}
+
+{# Load custom template filters for voting logic #}
 {% load voting_extras %}
 
+{# Set the title of the page dynamically #}
 {% block title %}Engineer Voting Dashboard{% endblock %}
 
+{# Main page content starts here #}
 {% block content %}
 <div class="container mt-4">
     <div class="row mb-4">
         <div class="col">
             <h1>Team Health Voting</h1>
+
+            {# Role Badge: shows if the user is a Team Leader or Engineer #}
             <span class="badge bg-primary fs-5">
             {% if user.profile.role == 'team_leader' %}Team Leader{% else %}Engineer{% endif %} Dashboard
             </span>
 
-            <!-- Session Info -->
+            {# ------------------------------ #}
+            {# Voting Session Info Card #}
+            {# ------------------------------ #}
             <div class="card shadow-sm my-4">
                 <div class="card-header bg-primary text-white">
                     <h5 class="mb-0">Voting Session</h5>
                 </div>
                 <div class="card-body">
                     {% if not selected_session %}
+                        {# Inform user when no active session is found #}
                         <div class="alert alert-info mb-0">No active voting session available.</div>
                     {% else %}
                         <p><strong>Current Session:</strong> {{ selected_session.name }}</p>
@@ -26,11 +36,15 @@
                 </div>
             </div>
 
+            {# ------------------------------ #}
+            {# Voting Form Section #}
+            {# ------------------------------ #}
             {% if selected_session and vote_form %}
-            <!-- Voting Form -->
             <form method="post">
                 {% csrf_token %}
                 <input type="hidden" name="session_id" value="{{ selected_session.id }}">
+
+                {# Loop through each health card/question #}
                 <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 mb-4">
                     {% for card in cards %}
                     <div class="col">
@@ -41,7 +55,9 @@
                             <div class="card-body">
                                 <p>{{ card.description }}</p>
 
-                                <!-- Vote Status -->
+                                {# ------------------------------ #}
+                                {# Current Vote Status Display #}
+                                {# ------------------------------ #}
                                 {% with status=existing_votes|get_vote_status:card.id %}
                                     {% if status in 'green amber red' %}
                                         <p>Status:
@@ -57,7 +73,9 @@
                                     {% endif %}
                                 {% endwith %}
 
-                                <!-- Vote Options -->
+                                {# ------------------------------ #}
+                                {# Voting Options (Radio Buttons) #}
+                                {# ------------------------------ #}
                                 {% with field=vote_form|get_card_field:card %}
                                     {% for subwidget in field %}
                                         <div class="form-check">
@@ -78,6 +96,8 @@
                     </div>
                     {% endfor %}
                 </div>
+
+                {# Submit button for voting form #}
                 <button type="submit" class="btn btn-success">Submit All Votes</button>
             </form>
             {% endif %}
